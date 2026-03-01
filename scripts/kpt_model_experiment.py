@@ -6,13 +6,13 @@ import numpy as np
 import pandas as pd
 from sklearn.ensemble import GradientBoostingRegressor
 from sklearn.preprocessing import LabelEncoder
-from sklearn.metrics import mean_absolute_error, root_mean_squared_error
+from sklearn.metrics import mean_absolute_error, mean_squared_error
 
 # ============================================================
 # LOAD DATA
 # ============================================================
 
-df = pd.read_csv("/mnt/user-data/uploads/orders_with_reliability.csv")
+df = pd.read_csv("orders_with_reliability.csv")
 
 # ============================================================
 # FEATURE ENGINEERING
@@ -72,32 +72,55 @@ weighted_model.fit(X_train, y_train, sample_weight=train_weights)
 baseline_preds = baseline_model.predict(X_test)
 weighted_preds = weighted_model.predict(X_test)
 
-baseline_mae  = mean_absolute_error(y_eval, baseline_preds)
-weighted_mae  = mean_absolute_error(y_eval, weighted_preds)
+# Absolute Errors
+baseline_abs_error = np.abs(y_eval - baseline_preds)
+weighted_abs_error = np.abs(y_eval - weighted_preds)
 
-baseline_rmse = root_mean_squared_error(y_eval, baseline_preds)
-weighted_rmse = root_mean_squared_error(y_eval, weighted_preds)
+# MAE
+baseline_mae = mean_absolute_error(y_eval, baseline_preds)
+weighted_mae = mean_absolute_error(y_eval, weighted_preds)
 
+# RMSE
+baseline_rmse = np.sqrt(mean_squared_error(y_eval, baseline_preds))
+weighted_rmse = np.sqrt(mean_squared_error(y_eval, weighted_preds))
+
+# Percentiles
+baseline_p50 = np.percentile(baseline_abs_error, 50)
+weighted_p50 = np.percentile(weighted_abs_error, 50)
+
+baseline_p90 = np.percentile(baseline_abs_error, 90)
+weighted_p90 = np.percentile(weighted_abs_error, 90)
+
+# Improvements
 mae_improvement  = ((baseline_mae  - weighted_mae)  / baseline_mae)  * 100
 rmse_improvement = ((baseline_rmse - weighted_rmse) / baseline_rmse) * 100
+p50_improvement  = ((baseline_p50  - weighted_p50)  / baseline_p50)  * 100
+p90_improvement  = ((baseline_p90  - weighted_p90)  / baseline_p90)  * 100
 
 # ============================================================
 # RESULTS
 # ============================================================
 
-print("\n" + "=" * 60)
+print("\n" + "=" * 70)
 print("  KPT MODEL EXPERIMENT — RESULTS")
-print("=" * 60)
-print(f"  {'Metric':<30} {'Baseline':>10}  {'Weighted':>10}")
-print("  " + "-" * 54)
-print(f"  {'MAE  (vs true_prep_duration)':<30} {baseline_mae:>10.4f}  {weighted_mae:>10.4f}")
-print(f"  {'RMSE (vs true_prep_duration)':<30} {baseline_rmse:>10.4f}  {weighted_rmse:>10.4f}")
-print("  " + "-" * 54)
-print(f"  {'MAE  Improvement (%)':<30} {mae_improvement:>+10.2f}%")
-print(f"  {'RMSE Improvement (%)':<30} {rmse_improvement:>+10.2f}%")
-print("=" * 60)
+print("=" * 70)
+print(f"  {'Metric':<30} {'Baseline':>12} {'Weighted':>12} {'Improvement':>12}")
+print("  " + "-" * 70)
 
+print(f"  {'MAE':<30} {baseline_mae:>12.4f} {weighted_mae:>12.4f} {mae_improvement:>11.2f}%")
+print(f"  {'RMSE':<30} {baseline_rmse:>12.4f} {weighted_rmse:>12.4f} {rmse_improvement:>11.2f}%")
+print(f"  {'P50 Absolute Error':<30} {baseline_p50:>12.4f} {weighted_p50:>12.4f} {p50_improvement:>11.2f}%")
+print(f"  {'P90 Absolute Error':<30} {baseline_p90:>12.4f} {weighted_p90:>12.4f} {p90_improvement:>11.2f}%")
+
+print("=" * 70)
+
+# Simple interpretation
 if mae_improvement > 0:
-    print(f"\n  ✅ Reliability weighting reduced MAE by {mae_improvement:.2f}%")
+    print(f"\n  ✅ Reliability weighting reduced overall MAE by {mae_improvement:.2f}%")
 else:
-    print(f"\n  ⚠️  Reliability weighting increased MAE by {abs(mae_improvement):.2f}%")
+    print(f"\n  ⚠️ Reliability weighting increased MAE by {abs(mae_improvement):.2f}%")
+
+if p90_improvement > 0:
+    print(f"  ✅ Tail error (P90) reduced by {p90_improvement:.2f}% — improved stability")
+else:
+    print(f"  ⚠️ Tail error (P90) increased by {abs(p90_improvement):.2f}%")
