@@ -124,3 +124,27 @@ if p90_improvement > 0:
     print(f"  ✅ Tail error (P90) reduced by {p90_improvement:.2f}% — improved stability")
 else:
     print(f"  ⚠️ Tail error (P90) increased by {abs(p90_improvement):.2f}%")
+
+# ============================================================
+# SEGMENT ANALYSIS — MAE BY MERCHANT TYPE
+# ============================================================
+
+test_df_eval = test_df.copy()
+test_df_eval["baseline_pred"] = baseline_preds
+test_df_eval["weighted_pred"] = weighted_preds
+
+print("\n" + "=" * 70)
+print("  SEGMENT ANALYSIS — MAE BY MERCHANT TYPE")
+print("=" * 70)
+print(f"  {'Type':<10} {'Baseline MAE':>14} {'Weighted MAE':>14} {'Improvement':>12}")
+print("  " + "-" * 54)
+
+for mtype in sorted(test_df_eval["merchant_type"].unique()):
+    subset   = test_df_eval[test_df_eval["merchant_type"] == mtype]
+    y_true_seg = subset[TARGET_EVAL]
+    b_mae    = mean_absolute_error(y_true_seg, subset["baseline_pred"])
+    w_mae    = mean_absolute_error(y_true_seg, subset["weighted_pred"])
+    imp      = ((b_mae - w_mae) / b_mae) * 100
+    print(f"  {mtype:<10} {b_mae:>14.4f} {w_mae:>14.4f} {imp:>11.2f}%")
+
+print("=" * 70)
