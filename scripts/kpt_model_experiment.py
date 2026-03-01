@@ -1,6 +1,3 @@
-# ============================================================
-# KPT PREDICTION — BASELINE vs RELIABILITY-WEIGHTED EXPERIMENT
-# ============================================================
 
 import numpy as np
 import pandas as pd
@@ -8,15 +5,9 @@ from sklearn.ensemble import GradientBoostingRegressor
 from sklearn.preprocessing import LabelEncoder
 from sklearn.metrics import mean_absolute_error, mean_squared_error
 
-# ============================================================
-# LOAD DATA
-# ============================================================
 
 df = pd.read_csv("orders_with_reliability.csv")
 
-# ============================================================
-# FEATURE ENGINEERING
-# ============================================================
 
 le = LabelEncoder()
 df["merchant_id_encoded"] = le.fit_transform(df["merchant_id"])
@@ -26,9 +17,6 @@ TARGET_TRAIN = "observed_prep_duration"
 TARGET_EVAL  = "true_prep_duration"
 WEIGHT_COL   = "FinalReliabilityScore"
 
-# ============================================================
-# TEMPORAL TRAIN / TEST SPLIT
-# ============================================================
 
 train_df = df[df["day"] <= 24].copy()
 test_df  = df[df["day"] >  24].copy()
@@ -49,25 +37,16 @@ print(f"  Features   : {FEATURES}")
 print(f"  Train target : {TARGET_TRAIN}")
 print(f"  Eval target  : {TARGET_EVAL}")
 
-# ============================================================
-# MODEL 1 — BASELINE (no weights)
-# ============================================================
 
 print("\n  Training baseline model ...")
 baseline_model = GradientBoostingRegressor(random_state=42)
 baseline_model.fit(X_train, y_train)
 
-# ============================================================
-# MODEL 2 — RELIABILITY-WEIGHTED
-# ============================================================
 
 print("  Training reliability-weighted model ...")
 weighted_model = GradientBoostingRegressor(random_state=42)
 weighted_model.fit(X_train, y_train, sample_weight=train_weights)
 
-# ============================================================
-# EVALUATION vs TRUE PREP DURATION
-# ============================================================
 
 baseline_preds = baseline_model.predict(X_test)
 weighted_preds = weighted_model.predict(X_test)
@@ -97,10 +76,8 @@ rmse_improvement = ((baseline_rmse - weighted_rmse) / baseline_rmse) * 100
 p50_improvement  = ((baseline_p50  - weighted_p50)  / baseline_p50)  * 100
 p90_improvement  = ((baseline_p90  - weighted_p90)  / baseline_p90)  * 100
 
-# ============================================================
-# RESULTS
-# ============================================================
 
+# RESULTS
 print("\n" + "=" * 70)
 print("  KPT MODEL EXPERIMENT — RESULTS")
 print("=" * 70)
@@ -124,10 +101,8 @@ if p90_improvement > 0:
     print(f"  ✅ Tail error (P90) reduced by {p90_improvement:.2f}% — improved stability")
 else:
     print(f"  ⚠️ Tail error (P90) increased by {abs(p90_improvement):.2f}%")
-
-# ============================================================
+    
 # SEGMENT ANALYSIS — MAE BY MERCHANT TYPE
-# ============================================================
 
 test_df_eval = test_df.copy()
 test_df_eval["baseline_pred"] = baseline_preds
